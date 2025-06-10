@@ -257,3 +257,21 @@ df_silo_status = (
 print("Status dos Silos (último registro de cada silo, com unidade):")
 print(df_silo_status)
 print("\n")
+
+# Atualização do SharePoint List MDS_PRODUCT_NAMES
+ctx_auth = AuthenticationContext(site_url)
+if ctx_auth.acquire_token_for_user(username, password):
+    ctx = ClientContext(site_url, ctx_auth)
+    lista = ctx.web.lists.get_by_title("MDS_PRODUCT_NAMES")
+    for idx, row in df_silo_status.iterrows():
+        silo_number = str(row['Silo'])  # Title é string no SharePoint
+        produto = row['Grau']
+        # Buscar o item pelo Title
+        items = lista.items.filter(f"Title eq '{silo_number}'").get().execute_query()
+        for item in items:
+            item.set_property('field_1', produto)
+            item.update()
+        ctx.execute_query()
+    print("SharePoint List atualizada com sucesso!")
+else:
+    print("Falha na autenticação")
