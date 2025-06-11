@@ -1,0 +1,5 @@
+pandas
+pyodbc
+cryptography
+office365-rest-python-client
+tagreader
