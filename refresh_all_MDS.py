@@ -1,15 +1,31 @@
 import tagreader
 import pyodbc
+import time
 from office365.sharepoint.client_context import ClientContext
 from office365.runtime.auth.authentication_context import AuthenticationContext
 import pandas as pd
 from datetime import datetime, timedelta
+from cryptography.fernet import Fernet
+
+with open('key.key', 'rb') as key_file:
+    key = key_file.read()
+    
+cipher = Fernet(key)
+
+with open('config.enc', 'rb') as config_file:
+    encrypted_data = config_file.read()
+
+config_data = cipher.decrypt(encrypted_data).decode()
+
+config_lines = config_data.split('\n')
+
+config_dict = {line.split('=')[0]: line.split('=')[1] for line in config_lines if '=' in line}
 
 # Conexão com banco de dados Aspen
-c = tagreader.IMSClient(datasource="maua-ntp01",
-                        imstype="aspenone",
+c = tagreader.IMSClient(datasource=config_dict["datasource"],# "maua-ntp01",
+                        imstype=config_dict["imstype"], # "aspenone",
                         tz="Brazil/East",
-                        url="http://maua-ntp01/ProcessData/AtProcessDataREST.dll")
+                        url=config_dict["url"]) # "http://maua-ntp01/ProcessData/AtProcessDataREST.dll")
 c.connect()
 
 # Tags que precisam ser lidas
@@ -120,13 +136,13 @@ df_main = df_main.drop_duplicates()
 # print(df_main)
 
 # Iniciando processo de extração de dados do Cabot Report via SQL Server
-server = 'maua-ntp01'
+
 database = 'report_db'
 username = 'ntp01read'
 password = '%Cabot19'
 
 # Criar string de conexão
-conn_str = f'DRIVER={{SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+conn_str = f'DRIVER={{SQL Server}};SERVER={config_dict["datasource"]};DATABASE={config_dict["database"]};UID={config_dict["SQLusername"]};PWD={config_dict["SQLpassword"]}'
 
 # Conectar ao banco
 conn = pyodbc.connect(conn_str)
@@ -177,9 +193,9 @@ df_main = df_main.dropna(how='all', subset=['Data'])
 # Conectar ao SharePoint e obter dados da lista
 # Informações de autenticação
 
-site_url = "https://cabotcorp.sharepoint.com/sites/MauaWPS/"
-username = "jim.nakamura@cabotcorp.com"
-password = "Otaku2010....."
+site_url = config_dict["site_url"] 
+username = config_dict["USERNAME"] 
+password = config_dict["PASSWORD"]
 
 ctx_auth = AuthenticationContext(site_url)
 if ctx_auth.acquire_token_for_user(username, password):
@@ -258,20 +274,35 @@ print("Status dos Silos (último registro de cada silo, com unidade):")
 print(df_silo_status)
 print("\n")
 
-# Atualização do SharePoint List MDS_PRODUCT_NAMES
-ctx_auth = AuthenticationContext(site_url)
-if ctx_auth.acquire_token_for_user(username, password):
-    ctx = ClientContext(site_url, ctx_auth)
-    lista = ctx.web.lists.get_by_title("MDS_PRODUCT_NAMES")
-    for idx, row in df_silo_status.iterrows():
-        silo_number = str(row['Silo'])  # Title é string no SharePoint
-        produto = row['Grau']
-        # Buscar o item pelo Title
-        items = lista.items.filter(f"Title eq '{silo_number}'").get().execute_query()
-        for item in items:
-            item.set_property('field_1', produto)
-            item.update()
-        ctx.execute_query()
-    print("SharePoint List atualizada com sucesso!")
-else:
-    print("Falha na autenticação")
+# Atualização do SharePoint List MDS_PRODUCT_NAMES com até 5 tentativas
+max_retries = 5
+success = False
+
+for attempt in range(1, max_retries + 1):
+    try:
+        ctx_auth = AuthenticationContext(site_url)
+        if ctx_auth.acquire_token_for_user(username, password):
+            ctx = ClientContext(site_url, ctx_auth)
+            lista = ctx.web.lists.get_by_title("MDS_PRODUCT_NAMES")
+            for idx, row in df_silo_status.iterrows():
+                silo_number = str(row['Silo'])  # Title é string no SharePoint
+                produto = row['Grau']
+                # Buscar o item pelo Title
+                items = lista.items.filter(f"Title eq '{silo_number}'").get().execute_query()
+                for item in items:
+                    item.set_property('field_1', produto)  # ajuste o nome do campo se necessário
+                    item.update()
+                ctx.execute_query()
+            print("SharePoint List atualizada com sucesso!")
+            success = True
+            break
+        else:
+            print(f"Tentativa {attempt}: Falha na autenticação")
+    except Exception as e:
+        print(f"Tentativa {attempt}: Erro ao atualizar SharePoint List: {e}")
+        time.sleep(2)  # espera 2 segundos antes de tentar novamente
+
+if not success:
+    print("Não foi possível atualizar o SharePoint List após 5 tentativas. Prosseguindo com o código...")
+    
+print("Processo de atualização concluído. Finalizando script.")
