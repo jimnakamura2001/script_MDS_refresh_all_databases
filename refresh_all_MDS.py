@@ -45,8 +45,8 @@ t_start = (now - timedelta(days=90)).replace(hour=0, minute=0, second=0, microse
 # Data de hoje até o horário atual
 t_end = now
 
-# Intervalo de 1 hora em segundos
-interval = 3600
+# Intervalo de 3 horas em segundos
+interval = 10800
 
 # Formatar datas
 t_start_str = t_start.strftime("%d.%m.%Y %H:%M:%S")
@@ -96,33 +96,37 @@ if 'time' in df_aspen_data.columns:
     df_aspen_data['time'] = pd.to_datetime(df_aspen_data['time']).dt.strftime('%d/%m/%Y %H:%M')
 
 print("Dados lidos do Aspen:")
-print(df_aspen_data.head())
+# print(df_aspen_data.head())
+print(df_aspen_data)
 print("\n")
 
 # Supondo que o índice do df_aspen_data seja a data/hora de cada linha
-df_main = pd.concat([
+df_main_aspen = pd.concat([
     pd.DataFrame({
         'Data': df_aspen_data['time'] if 'time' in df_aspen_data.columns else df_aspen_data.index,
         'Grau': df_aspen_data['1.REAC1.DCS.GRADE'],
         'Silo': df_aspen_data['1.PROD.SILO'],
-        'Unidade': 'MA-1'
+        'Unidade': 'MA-1',
+        'Fonte': 'Aspen'
     }),
     pd.DataFrame({
         'Data': df_aspen_data['time'] if 'time' in df_aspen_data.columns else df_aspen_data.index,
         'Grau': df_aspen_data['2.REAC1.DCS.GRADE'],
         'Silo': df_aspen_data['2.PROD.SILO'],
-        'Unidade': 'MA-2'
+        'Unidade': 'MA-2',
+        'Fonte': 'Aspen'
     }),
     pd.DataFrame({
         'Data': df_aspen_data['time'] if 'time' in df_aspen_data.columns else df_aspen_data.index,
         'Grau': df_aspen_data['3.REAC1.DCS.GRADE'],
         'Silo': df_aspen_data['3.PROD.SILO'],
-        'Unidade': 'MA-3'
+        'Unidade': 'MA-3',
+        'Fonte': 'Aspen'
     }),
 ], ignore_index=True)
 
 # Opcional: remover linhas onde Grau e Silo estão ambos vazios
-df_main = df_main.dropna(how='all', subset=['Silo'])
+df_main = df_main_aspen.dropna(how='all', subset=['Silo'])
 
 # Transformar coluna Silo em inteiro (remover .0)
 df_main['Silo'] = pd.to_numeric(df_main['Silo'], errors='coerce').astype('Int64')
@@ -163,7 +167,8 @@ df_cbt_report['startdate'] = pd.to_datetime(df_cbt_report['startdate'])
 df_cbt_report['startdate'] = pd.to_datetime(df_cbt_report['startdate']).dt.strftime('%d/%m/%Y %H:%M')
 
 print("Dados do Cabot Report:")
-print(df_cbt_report.head())
+# print(df_cbt_report.head())
+print(df_cbt_report)
 print("\n")
 
 # Renomear colunas do df_cbt_report para corresponder ao df_main
@@ -178,8 +183,10 @@ df_cbt_report_ren = df_cbt_report.rename(columns={
 df_cbt_report_ren['Silo'] = pd.to_numeric(df_cbt_report_ren['Silo'], errors='coerce').astype('Int64')
 df_cbt_report_ren['Data'] = pd.to_datetime(df_cbt_report_ren['Data'], dayfirst=True)
 
+df_cbt_report_ren['Fonte'] = 'Cabot Report'
+
 # Concatenar os dois dataframes
-df_main = pd.concat([df_main, df_cbt_report_ren[['Data', 'Grau', 'Silo', 'Unidade']]], ignore_index=True)
+df_main = pd.concat([df_main, df_cbt_report_ren[['Data', 'Grau', 'Silo', 'Unidade', 'Fonte']]], ignore_index=True)
 
 # Opcional: remover duplicatas após a junção
 df_main = df_main.drop_duplicates(subset=['Data','Silo', 'Unidade', 'Grau'])
@@ -231,6 +238,8 @@ df_sharepoint = df_sharepoint.sort_values('Data', ascending=False).reset_index(d
 # (Opcional) Voltar para string no formato desejado
 df_sharepoint['Data'] = df_sharepoint['Data'].dt.strftime('%d/%m/%Y %H:%M')
 
+df_sharepoint['Fonte'] = 'SharePoint'
+
 print("DataFrame Sharepoint:")
 print(df_sharepoint)
 print("\n")
@@ -239,7 +248,7 @@ print("\n")
 df_main = pd.concat([df_main, df_sharepoint], ignore_index=True)
 
 # Concatenar os dois dataframes
-df_main = pd.concat([df_main, df_cbt_report_ren[['Data', 'Grau', 'Silo', 'Unidade']]], ignore_index=True)
+df_main = pd.concat([df_main, df_cbt_report_ren[['Data', 'Grau', 'Silo', 'Unidade', 'Fonte']]], ignore_index=True)
 
 # Opcional: remover duplicatas após a junção
 df_main = df_main.drop_duplicates(subset=['Data','Silo', 'Unidade', 'Grau'])
@@ -256,7 +265,8 @@ df_main = df_main.sort_values('Data', ascending=False).reset_index(drop=True)
 df_main = df_main.dropna(how='all', subset=['Data'])
 
 print("DataFrame principal combinado:")
-print(df_main.head())
+# print(df_main.head())
+print(df_main)
 print("\n")
 
 # Novo DataFrame: última linha de cada tipo de silo (por Silo, mantendo Unidade)
@@ -273,6 +283,30 @@ df_silo_status = (
 print("Status dos Silos (último registro de cada silo, com unidade):")
 print(df_silo_status)
 print("\n")
+
+# print(df_aspen_data.loc[
+#     (df_aspen_data['2.PROD.SILO'] == 9)
+# ][tags])
+
+# ========================================================================================================================================================================================
+# Consulta interativa dos últimos 10 registros de um silo
+# while True:
+#     try:
+#         silo_input = input("Digite o número do silo para consultar os últimos 10 registros (ou 'sair' para encerrar): ").strip()
+#         if silo_input.lower() == 'sair':
+#             print("Encerrando consulta.")
+#             break
+#         silo_num = int(silo_input)
+#         registros = df_main[df_main['Silo'] == silo_num].sort_values('Data', ascending=False).head(10)
+#         if registros.empty:
+#             print(f"Nenhum registro encontrado para o silo {silo_num}.")
+#         else:
+#             print(f"\nÚltimos 10 registros do silo {silo_num}:\n")
+#             print(registros[['Data', 'Unidade', 'Silo', 'Grau', 'Fonte']].to_string(index=False))
+#             print("\n")
+#     except ValueError:
+#         print("Por favor, digite um número de silo válido ou 'sair' para encerrar.")
+# ========================================================================================================================================================================================
 
 # Atualização do SharePoint List MDS_PRODUCT_NAMES com até 5 tentativas
 max_retries = 5
