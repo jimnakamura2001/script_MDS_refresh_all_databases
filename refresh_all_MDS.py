@@ -313,6 +313,8 @@ logging.info("Status dos Silos (último registro de cada silo, com unidade):")
 logging.info(df_silo_status.to_string())
 logging.info("\n")
 
+
+
 # logging.info(df_aspen_data.loc[
 #     (df_aspen_data['2.PROD.SILO'] == 9)
 # ][tags])

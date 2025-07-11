@@ -1,5 +1,6 @@
 pandas
 pyodbc
+pywin32
 cryptography
 office365-rest-python-client
 tagreader
