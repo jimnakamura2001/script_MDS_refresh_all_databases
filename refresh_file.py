@@ -5,18 +5,18 @@ from cryptography.fernet import Fernet
 import time
 import os
 
-with open('key.key', 'rb') as key_file:
+user = os.getlogin()
+config_folder = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - General\BD\ANALISES"
+key_path = os.path.join(config_folder, "key.key")
+config_enc_path = os.path.join(config_folder, "config.enc")
+
+with open(key_path, 'rb') as key_file:
     key = key_file.read()
-    
 cipher = Fernet(key)
-
-with open('config.enc', 'rb') as config_file:
+with open(config_enc_path, 'rb') as config_file:
     encrypted_data = config_file.read()
-
 config_data = cipher.decrypt(encrypted_data).decode()
-
 config_lines = config_data.split('\n')
-
 config_dict = {line.split('=')[0]: line.split('=')[1] for line in config_lines if '=' in line}
 
 CLIENT_ID = config_dict.get('USERNAME')

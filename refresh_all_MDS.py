@@ -13,36 +13,17 @@ from cryptography.fernet import Fernet
 
 user = os.getlogin()  # Captura o nome do usuário atual
 
-# Configuração do logger
-log_dir = rf"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - Documents\General\BD_WPS\Medicao_Silos\log"
-log_filename = f"log-{datetime.now().strftime('%d-%m-%Y-%H-%M')}.txt"
-log_path = f"{log_dir}\\{log_filename}"
+config_folder = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - General\BD\ANALISES"
+key_path = os.path.join(config_folder, "key.key")
+config_enc_path = os.path.join(config_folder, "config.enc")
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[
-        logging.FileHandler(log_path, encoding="utf-8"),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-
-logging.info("Teste de log: início do script")
-
-logging.info(f"Usuário detectado: {user} \n")
-
-with open('key.key', 'rb') as key_file:
+with open(key_path, 'rb') as key_file:
     key = key_file.read()
-    
 cipher = Fernet(key)
-
-with open('config.enc', 'rb') as config_file:
+with open(config_enc_path, 'rb') as config_file:
     encrypted_data = config_file.read()
-
 config_data = cipher.decrypt(encrypted_data).decode()
-
 config_lines = config_data.split('\n')
-
 config_dict = {line.split('=')[0]: line.split('=')[1] for line in config_lines if '=' in line}
 
 # Conexão com banco de dados Aspen
@@ -76,9 +57,9 @@ interval = 10800
 t_start_str = t_start.strftime("%d.%m.%Y %H:%M:%S")
 t_end_str = t_end.strftime("%d.%m.%Y %H:%M:%S")
 
-logging.info(f"t_start: {t_start_str}")
-logging.info(f"t_end: {t_end_str}")
-logging.info(f"interval: {interval}")
+print(f"t_start: {t_start_str}")
+print(f"t_end: {t_end_str}")
+print(f"interval: {interval}")
 
 df_aspen_data = c.read(tags, t_start_str, t_end_str, interval, read_type=tagreader.ReaderType.INTERPOLATED)
 
@@ -97,9 +78,9 @@ map_ma3 = dict(zip(
     mapping_df['ma3code'].dropna().astype(int).astype(str),
     mapping_df['ma3name'].dropna()
 ))
-# logging.info(map_ma1)
-# logging.info(map_ma2)
-# logging.info(map_ma3)
+# print(map_ma1)
+# print(map_ma2)
+# print(map_ma3)
 
 # Substituir os códigos pelos nomes nas colunas do DataFrame
 df_aspen_data['1.REAC1.DCS.GRADE'] = df_aspen_data['1.REAC1.DCS.GRADE'].astype(str).map(map_ma1)
@@ -119,11 +100,11 @@ df_aspen_data = df_aspen_data.drop_duplicates()
 if 'time' in df_aspen_data.columns:
     df_aspen_data['time'] = pd.to_datetime(df_aspen_data['time']).dt.strftime('%d/%m/%Y %H:%M')
 
-logging.info("Dados lidos do Aspen:")
+print("Dados lidos do Aspen:")
 # print(df_aspen_data.head())
 # print(df_aspen_data)
-logging.info(df_aspen_data.to_string())
-logging.info("\n")
+print(df_aspen_data.to_string())
+print("\n")
 
 # Supondo que o índice do df_aspen_data seja a data/hora de cada linha
 df_main_aspen = pd.concat([
@@ -161,8 +142,8 @@ df_main = df_main[df_main['Silo'] <= 20]
 
 df_main = df_main.drop_duplicates()
 
-# logging.info("DataFrame principal:")
-# logging.info(df_main)
+# print("DataFrame principal:")
+# print(df_main)
 
 # Iniciando processo de extração de dados do Cabot Report via SQL Server
 
@@ -191,11 +172,11 @@ df_cbt_report['startdate'] = pd.to_datetime(df_cbt_report['startdate'])
 # Converter a coluna startdate do df_cbt_report para datetime no formato desejado
 df_cbt_report['startdate'] = pd.to_datetime(df_cbt_report['startdate']).dt.strftime('%d/%m/%Y %H:%M')
 
-logging.info("Dados do Cabot Report:")
+print("Dados do Cabot Report:")
 # print(df_cbt_report.head())
 # print(df_cbt_report)
-logging.info(df_cbt_report.to_string())
-logging.info("\n")
+print(df_cbt_report.to_string())
+print("\n")
 
 # Renomear colunas do df_cbt_report para corresponder ao df_main
 df_cbt_report_ren = df_cbt_report.rename(columns={
@@ -243,7 +224,7 @@ if ctx_auth.acquire_token_for_user(username, password):
     df_sharepoint = pd.DataFrame(data)
         
 else:
-    logging.info("Falha na autenticação")
+    print("Falha na autenticação")
 
 # Manter apenas as colunas desejadas
 df_sharepoint = df_sharepoint[['Data', 'SILO', 'UNIDADE', 'Status_Grau']]
@@ -266,10 +247,10 @@ df_sharepoint['Data'] = df_sharepoint['Data'].dt.strftime('%d/%m/%Y %H:%M')
 
 df_sharepoint['Fonte'] = 'SharePoint'
 
-logging.info("DataFrame Sharepoint:")
+print("DataFrame Sharepoint:")
 # print(df_sharepoint)
-logging.info(df_sharepoint.to_string())
-logging.info("\n")
+print(df_sharepoint.to_string())
+print("\n")
 
 # Combinar os DataFrames
 df_main = pd.concat([df_main, df_sharepoint], ignore_index=True)
@@ -291,11 +272,11 @@ df_main = df_main.sort_values('Data', ascending=False).reset_index(drop=True)
 
 df_main = df_main.dropna(how='all', subset=['Data'])
 
-logging.info("DataFrame principal combinado:")
+print("DataFrame principal combinado:")
 # print(df_main.head())
-# logging.info(df_main)
-logging.info(df_main.to_string())
-logging.info("\n")
+# print(df_main)
+print(df_main.to_string())
+print("\n")
 
 # Novo DataFrame: última linha de cada tipo de silo (por Silo, mantendo Unidade)
 df_silo_status = (
@@ -308,14 +289,14 @@ df_silo_status = (
     .sort_values('Silo')
     .reset_index(drop=True)
 )
-logging.info("Status dos Silos (último registro de cada silo, com unidade):")
-# logging.info(df_silo_status)
-logging.info(df_silo_status.to_string())
-logging.info("\n")
+print("Status dos Silos (último registro de cada silo, com unidade):")
+# print(df_silo_status)
+print(df_silo_status.to_string())
+print("\n")
 
 
 
-# logging.info(df_aspen_data.loc[
+# print(df_aspen_data.loc[
 #     (df_aspen_data['2.PROD.SILO'] == 9)
 # ][tags])
 
@@ -325,18 +306,18 @@ logging.info("\n")
 #     try:
 #         silo_input = input("Digite o número do silo para consultar os últimos 10 registros (ou 'sair' para encerrar): ").strip()
 #         if silo_input.lower() == 'sair':
-#             logging.info("Encerrando consulta.")
+#             print("Encerrando consulta.")
 #             break
 #         silo_num = int(silo_input)
 #         registros = df_main[df_main['Silo'] == silo_num].sort_values('Data', ascending=False).head(10)
 #         if registros.empty:
-#             logging.info(f"Nenhum registro encontrado para o silo {silo_num}.")
+#             print(f"Nenhum registro encontrado para o silo {silo_num}.")
 #         else:
-#             logging.info(f"\nÚltimos 10 registros do silo {silo_num}:\n")
-#             logging.info(registros[['Data', 'Unidade', 'Silo', 'Grau', 'Fonte']].to_string(index=False))
-#             logging.info("\n")
+#             print(f"\nÚltimos 10 registros do silo {silo_num}:\n")
+#             print(registros[['Data', 'Unidade', 'Silo', 'Grau', 'Fonte']].to_string(index=False))
+#             print("\n")
 #     except ValueError:
-#         logging.info("Por favor, digite um número de silo válido ou 'sair' para encerrar.")
+#         print("Por favor, digite um número de silo válido ou 'sair' para encerrar.")
 # ========================================================================================================================================================================================
 
 # Atualização do SharePoint List MDS_PRODUCT_NAMES com até 5 tentativas
@@ -358,19 +339,19 @@ for attempt in range(1, max_retries + 1):
                     item.set_property('field_1', produto)  # ajuste o nome do campo se necessário
                     item.update()
                 ctx.execute_query()
-            logging.info("SharePoint List atualizada com sucesso!")
+            print("SharePoint List atualizada com sucesso!")
             success = True
             break
         else:
-            logging.info(f"Tentativa {attempt}: Falha na autenticação")
+            print(f"Tentativa {attempt}: Falha na autenticação")
     except Exception as e:
-        logging.info(f"Tentativa {attempt}: Erro ao atualizar SharePoint List: {e}")
+        print(f"Tentativa {attempt}: Erro ao atualizar SharePoint List: {e}")
         time.sleep(2)  # espera 2 segundos antes de tentar novamente
 
 if not success:
-    logging.info("Não foi possível atualizar o SharePoint List após 5 tentativas. Prosseguindo com o código...")
+    print("Não foi possível atualizar o SharePoint List após 5 tentativas. Prosseguindo com o código...")
     
-logging.info("Processo de atualização concluído. Finalizando script.")
+print("Processo de atualização concluído. Finalizando script.")
 
 for handler in logging.getLogger().handlers:
     handler.flush()
