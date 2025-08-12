@@ -6,7 +6,12 @@ from cryptography.fernet import Fernet
 
 # Se precisar de configuração encriptada, mantenha este bloco:
 user = os.getlogin()
-config_folder = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - General\BD\ANALISES"
+config_folder_1 = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - General\BD\ANALISES"
+config_folder_2 = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - Documents\General\BD\ANALISES"
+if os.path.exists(config_folder_1):
+    config_folder = config_folder_1
+else:
+    config_folder = config_folder_2
 key_path = os.path.join(config_folder, "key.key")
 config_enc_path = os.path.join(config_folder, "config.enc")
 
@@ -20,7 +25,8 @@ config_lines = config_data.split('\n')
 config_dict = {line.split('=')[0]: line.split('=')[1] for line in config_lines if '=' in line}
 
 # Caminho absoluto do arquivo local
-LOCAL_FILE = rf"C:\Users\{user}\cabotcorp.com\Maua WPS Team - General\WPS\Medição de Silos\Medicao de Silos Atual_teste_automate.xlsx"
+# LOCAL_FILE = rf"C:\Users\{user}\cabotcorp.com\Maua WPS Team - General\WPS\Medição de Silos\Medicao de Silos Atual_teste_automate.xlsx"
+LOCAL_FILE = rf"C:\Users\CManut\cabotcorp.com\Maua WPS Team - General\WPS\Medição de Silos\Medicao de Silos Atual_teste_automate.xlsx"
 
 # 1. Abrir no Excel, fazer Refresh All e salvar
 print(f"🔄 Abrindo o arquivo Excel: {LOCAL_FILE}")
