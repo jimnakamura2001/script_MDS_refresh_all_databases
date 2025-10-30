@@ -2,6 +2,8 @@ import win32com.client as win32
 import time
 import os
 import sys
+import subprocess
+from datetime import datetime
 from cryptography.fernet import Fernet
 
 # Se precisar de configuração encriptada, mantenha este bloco:
@@ -26,7 +28,12 @@ config_dict = {line.split('=')[0]: line.split('=')[1] for line in config_lines i
 
 # Caminho absoluto do arquivo local
 # LOCAL_FILE = rf"C:\Users\{user}\cabotcorp.com\Maua WPS Team - General\WPS\Medição de Silos\Medicao de Silos Atual_teste_automate.xlsx"
-LOCAL_FILE = rf"C:\Users\CManut\cabotcorp.com\Maua WPS Team - General\WPS\Medição de Silos\Medicao de Silos Atual_teste_automate.xlsx"
+LOCAL_FILE = rf"C:\Users\{user}\cabotcorp.com\Maua WPS Team - General\WPS\Medição de Silos\Medicao de Silos Atual_teste_automate.xlsx"
+
+# Garante que todas as instâncias do Excel estão fechadas antes de abrir com win32com
+print("Fechando todas as instâncias do Excel...")
+subprocess.call("taskkill /f /im excel.exe", shell=True)
+time.sleep(2)  # Aguarda 2 segundos para garantir que o processo foi encerrado
 
 # 1. Abrir no Excel, fazer Refresh All e salvar
 print(f"🔄 Abrindo o arquivo Excel: {LOCAL_FILE}")
@@ -59,3 +66,18 @@ wb.Save()
 wb.Close()
 excel.Quit()
 print(f"✅ Refresh concluído e salvamento OK (tempo total RefreshAll: {time.time() - start_refresh:.1f} segundos)")
+
+# Atualização do SharePoint List MDS_PRODUCT_NAMES com até 5 tentativas
+att_folder_1 = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - General\BD_WPS\Medicao_Silos"
+att_folder_2 = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - Documents\General\BD_WPS\Medicao_Silos"
+if os.path.exists(att_folder_1):
+    att_folder = att_folder_1
+else:
+    att_folder = att_folder_2
+
+# Criar arquivo que confirma que o script rodou completamente e exclui antes se ele ja existe:
+completion_file = os.path.join(att_folder, "script_refresh_COMPLETED.txt")
+if os.path.exists(completion_file):
+    os.remove(completion_file)
+with open(completion_file, 'w') as f:
+    f.write(f"Script de refresh rodado completamente em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")

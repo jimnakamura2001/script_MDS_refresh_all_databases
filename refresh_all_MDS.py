@@ -13,7 +13,12 @@ from cryptography.fernet import Fernet
 
 user = os.getlogin()  # Captura o nome do usuário atual
 
-config_folder = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - General\BD\ANALISES"
+config_folder_1 = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - General\BD\ANALISES"
+config_folder_2 = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - Documents\General\BD\ANALISES"
+if os.path.exists(config_folder_1):
+    config_folder = config_folder_1
+else:
+    config_folder = config_folder_2
 key_path = os.path.join(config_folder, "key.key")
 config_enc_path = os.path.join(config_folder, "config.enc")
 
@@ -175,7 +180,7 @@ df_cbt_report['startdate'] = pd.to_datetime(df_cbt_report['startdate']).dt.strft
 print("Dados do Cabot Report:")
 # print(df_cbt_report.head())
 # print(df_cbt_report)
-print(df_cbt_report.to_string())
+# print(df_cbt_report.to_string())
 print("\n")
 
 # Renomear colunas do df_cbt_report para corresponder ao df_main
@@ -210,6 +215,7 @@ df_main = df_main.dropna(how='all', subset=['Data'])
 site_url = config_dict["site_url"] 
 username = config_dict["USERNAME"] 
 password = config_dict["PASSWORD"]
+# password = "Otaku2010......."
 
 ctx_auth = AuthenticationContext(site_url)
 if ctx_auth.acquire_token_for_user(username, password):
@@ -294,8 +300,6 @@ print("Status dos Silos (último registro de cada silo, com unidade):")
 print(df_silo_status.to_string())
 print("\n")
 
-
-
 # print(df_aspen_data.loc[
 #     (df_aspen_data['2.PROD.SILO'] == 9)
 # ][tags])
@@ -319,8 +323,14 @@ print("\n")
 #     except ValueError:
 #         print("Por favor, digite um número de silo válido ou 'sair' para encerrar.")
 # ========================================================================================================================================================================================
-
 # Atualização do SharePoint List MDS_PRODUCT_NAMES com até 5 tentativas
+att_folder_1 = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - General\BD_WPS\Medicao_Silos"
+att_folder_2 = fr"C:\Users\{user}\cabotcorp.com\Cabot Brazil Dashboards - Documents\General\BD_WPS\Medicao_Silos"
+if os.path.exists(att_folder_1):
+    att_folder = att_folder_1
+else:
+    att_folder = att_folder_2
+
 max_retries = 5
 success = False
 
@@ -350,8 +360,21 @@ for attempt in range(1, max_retries + 1):
 
 if not success:
     print("Não foi possível atualizar o SharePoint List após 5 tentativas. Prosseguindo com o código...")
+    # Criar arquivo que confirma que o script não rodou completamente e exclui antes se ele ja existe:
+    completion_file = os.path.join(att_folder, "script_MDS_refresh_all_databases_NOT_COMPLETED.txt")
+    if os.path.exists(completion_file):
+        os.remove(completion_file)
+    with open(completion_file, 'w') as f:
+        f.write(f"Script não rodado completamente em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
     
 print("Processo de atualização concluído. Finalizando script.")
 
 for handler in logging.getLogger().handlers:
     handler.flush()
+
+# Criar arquivo que confirma que o script rodou completamente e exclui antes se ele ja existe:
+completion_file = os.path.join(att_folder, "script_MDS_refresh_all_databases_COMPLETED.txt")
+if os.path.exists(completion_file):
+    os.remove(completion_file)
+with open(completion_file, 'w') as f:
+    f.write(f"Script rodado completamente em {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
