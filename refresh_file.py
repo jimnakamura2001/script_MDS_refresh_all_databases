@@ -37,7 +37,11 @@ time.sleep(2)  # Aguarda 2 segundos para garantir que o processo foi encerrado
 
 # 1. Abrir no Excel, fazer Refresh All e salvar
 print(f"🔄 Abrindo o arquivo Excel: {LOCAL_FILE}")
-excel = win32.gencache.EnsureDispatch('Excel.Application')
+try:
+    excel = win32.gencache.EnsureDispatch('Excel.Application')
+except AttributeError:
+    print("Tentando método alternativo de inicialização do Excel...")
+    excel = win32.Dispatch('Excel.Application')
 excel.DisplayAlerts = False
 excel.AskToUpdateLinks = False
 # excel.Visible = False
