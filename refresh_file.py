@@ -52,17 +52,40 @@ wb = excel.Workbooks.Open(LOCAL_FILE, ReadOnly=False)
 print(f"✅ Arquivo aberto em {time.time() - start_open:.1f} segundos.")
 print("🔄 Iniciando RefreshAll() (isso pode demorar, aguarde...)")
 start_refresh = time.time()
-wb.RefreshAll()
-print("⏳ RefreshAll() chamado. Aguardando 30 segundos para garantir atualização...")
-wait_seconds = 30
-print(f"Aguardando liberação do arquivo pelo Excel ({wait_seconds} segundos):")
-for i in range(wait_seconds):
-    progress = int(30 * (i + 1) / wait_seconds)
-    bar = f"[{'|' * progress}{' ' * (30 - progress)}]"
-    sys.stdout.write(f"\r{bar} {i+1}/{wait_seconds}s")
-    sys.stdout.flush()
-    time.sleep(1)
-print("\nArquivo deve estar liberado, continuando...")
+max_tentativas = 5
+tentativa_atual = 1
+sucesso = False
+
+while tentativa_atual <= max_tentativas and not sucesso:
+    try:
+        print(f"\nTentativa {tentativa_atual} de {max_tentativas}")
+        wb.RefreshAll()
+        wait_seconds = 60
+        print(f"⏳ RefreshAll() chamado. Aguardando {wait_seconds} segundos para garantir atualização...")
+        print(f"Aguardando liberação do arquivo pelo Excel ({wait_seconds} segundos):")
+        
+        for i in range(wait_seconds):
+            progress = int(60 * (i + 1) / wait_seconds)
+            bar = f"[{'|' * progress}{' ' * (60 - progress)}]"
+            sys.stdout.write(f"\r{bar} {i+1}/{wait_seconds}s")
+            sys.stdout.flush()
+            time.sleep(1)
+        
+        # Se chegou até aqui sem erros, marca como sucesso
+        sucesso = True
+        print("\n✅ RefreshAll() completado com sucesso!")
+        
+    except Exception as e:
+        print(f"\n❌ Erro na tentativa {tentativa_atual}: {str(e)}")
+        if tentativa_atual < max_tentativas:
+            tempo_espera = 10  # Segundos de espera entre tentativas
+            print(f"Aguardando {tempo_espera} segundos antes da próxima tentativa...")
+            time.sleep(tempo_espera)
+        tentativa_atual += 1
+
+if not sucesso:
+    raise Exception("❌ Falha após todas as tentativas de refresh. Verifique o Excel e tente novamente.")
+
 print(f"✅ RefreshAll() e espera concluídos em {time.time() - start_refresh:.1f} segundos.")
 
 print("💾 Salvando arquivo...")
